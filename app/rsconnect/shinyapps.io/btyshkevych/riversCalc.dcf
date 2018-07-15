@@ -1,0 +1,12 @@
+name: riversCalc
+title: riversCalc
+username:
+account: btyshkevych
+server: shinyapps.io
+hostUrl: https://api.shinyapps.io/v1
+appId: 381352
+bundleId: 1481102
+url: https://btyshkevych.shinyapps.io/riversCalc/
+when: 1531641373.91835
+asMultiple: FALSE
+asStatic: FALSE
