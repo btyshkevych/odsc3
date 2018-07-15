@@ -1,16 +1,16 @@
 
 # Важливі посилання
-# Веб сторінка Tidyvers: https://www.tidyverse.org/
+# Веб сторінка Tidyverse: https://www.tidyverse.org/
 # Підказки по R та RStudio у зручному форматі: https://www.rstudio.com/resources/cheatsheets/
 
 
 # КРОК 1: Інсталюємо пакунки. Це робиться всього один раз. 
-# Якщо у вас все вже інстальовано пропустіть цей крок.
+# Якщо у вас вже все інстальовано пропустіть цей крок.
 install.packages("tidyverse")
 install.packages("ggmap")
 install.packages("lubridate")
 
-# КРОК 2: встановлюємо робочу директорію. Це можна зробити функціє або у графічному інтерфейсі. 
+# КРОК 2: встановлюємо робочу директорію. Це можна зробити функцією через консоль або у графічному інтерфейсі. 
 # Оскільки у мене всі файли знаходяться в папці "~/Desktop/rivers_data", я використовую наступний код:
 setwd("~/Desktop/rivers_data")
 
@@ -67,19 +67,23 @@ sufat_rivers <- rivers_long %>%
   summarise(max_value = max(concentration)) %>%
   arrange(max_value)
 
-# КРОК 7. НАШЕ ЗАВДАННЯ РОЗРАЗРАХУВАТИ СЕРЕДНЄ ЗНАЧЕННЯ ПО КОНЦЕНТРАЦІЇ ЗАБРУДНЮЮЧИХ РЕЧОВИН (concentration)
+# КРОК 7. НАШЕ ЗАВДАННЯ РОЗРАЗРАХУВАТИ СЕРЕДНЄ ЗНАЧЕННЯ ТА ІНШІ ПОКАЗНИКИ ПО КОНЦЕНТРАЦІЇ ЗАБРУДНЮЮЧИХ РЕЧОВИН (concentration)
 # НА КОЖНОМУ ПОСТІ СПОСТЕРЕЖЕННЯ (НазваПС). ВИКОРИСТАЄМО DPLYR
 # na.omit() - пропустити NA
 
 substs_on_posts <- rivers_long %>%
   na.omit() %>%
-  # відфільтруємо спостереження за 2018 рік
-  # filter(rivers_long, ДатаСпостережень < as.Date("2018-01-01") & ДатаСпостережень >= as.Date("2017-12-20")) %>%
   # групувати треба за НазваПС, substance, але ми додамо ще lat та lon, щоб лишити їх у таблиці для візуалізації.
   group_by(НазваПС, substance, lat, lon) %>%
   summarize(mean = mean(concentration), median = median(concentration), min = min(concentration), max = max(concentration))
-# запишимо таблицю
+# запишимо таблицю (це для візуалізації та аплікації)
 write.csv(gather(substs_on_posts, valueType, value, -c(1:4)), "riversStats.csv")
+
+
+# офтоп: шматок коду, щоб відфільтрувати за датою
+# filter(rivers_long, ДатаСпостережень < as.Date("2018-01-01") & ДатаСпостережень >= as.Date("2017-01-01"))
+
+
 
 # КРОК 8. СТВОРЮЄМО КАРТУ У GGMAP
 # визначимо вектор з центральними координатами для території України
@@ -89,24 +93,25 @@ ukraine_map <- get_map(ukraine, zoom = 5, scale = 3,
                        maptype = "toner-lite", source = "stamen")
 
 # ВІДМАЛЬОВУЄМО КАТКУ
-# код без пояснень. Зверніть увагу я використав функцію log() на mean, щоб змешити великі значення у розподілі
+# код без пояснень
 ggmap(ukraine_map, 
       base_layer = ggplot(substs_on_posts, aes(lon, lat, col = mean))) + 
   geom_point(size = 0.5) + scale_colour_gradient(low = "#4286f4", high = "#373B44") + 
   facet_wrap(~ substance)
 
-
-#анотований код
-ggmap(ukraine_map,        # перший аргумент - це підкладка
-      base_layer = ggplot(substs_on_posts, aes(lon, lat, col = mean))) +    # розміщуємо шар з точками base_layer. це по суті код для ggplot2
-  geom_point(size = 0.5) +    # налаштування шару точок
+# для того, щоб розібратися з цим кодом потрібно вивчити як візуалізувати дані у ggplot2
+# дам певну анотацію для розуміння
+ggmap(ukraine_map, # перший аргумент - це підкладка
+      base_layer = ggplot(substs_on_posts, aes(lon, lat, col = mean))) + # розміщуємо шар з точками base_layer. це по суті код для ggplot2
+  geom_point(size = 0.5) + # налаштування шару точок
   scale_colour_gradient(low = "#4286f4", high = "#373B44") + # налаштування кольрів
-  facet_wrap(~substance) # розбиваємо на речовини
+  facet_wrap(~substance) # розбиваємо графік на речовини
 
 # проаналізуємо отримане зображення. Головна проблема з ним, що для всіх показників використана одна шкала,
 # а, як ми бачимо всі показники мають різний розмах значень
 
 # як вихід, спробуємо зробити багато карт. Щоб не писати багато коду використаємо цикл for для кожної речовини
+# для того щоб отримати назви речовин використаємо unique(substs_on_posts$substance)
 
 for (i in unique(substs_on_posts$substance)) {
   # фільтруємо таблицю для кожної речовини
